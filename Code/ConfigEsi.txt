@@ -1,0 +1,8 @@
+minSemi = 1
+maxSemi = 118
+plotESI = 1
+plotMel = 1
+plotBg = 1
+smoothness = 2
+
+#minSemi e maxSemi em semitons

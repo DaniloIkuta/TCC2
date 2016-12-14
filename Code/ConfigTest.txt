@@ -1,0 +1,38 @@
+# Created by Octave 4.2.0, Sat Dec 10 22:10:26 2016 BRST <DaniloIkuta@MacBook-Pro-4.local>
+# name: samplesPath
+# type: string
+# elements: 1
+# length: 17
+../Samples/Custom
+
+
+# name: outPath
+# type: string
+# elements: 1
+# length: 10
+../Output/
+
+
+# name: audio
+# type: string
+# elements: 9
+# length: 12
+LTR-TS(I1)  
+# length: 12
+Dl-SotMM(S1)
+# length: 12
+HSMK-Bi(C1) 
+# length: 12
+HS-MiB(V1)  
+# length: 12
+Eg-TEGC(PC2)
+# length: 12
+Ka-TtB(C3)  
+# length: 12
+SSBB-TLoZ(9)
+# length: 12
+GC-H(I1)    
+# length: 12
+SA-B(C1)    
+
+

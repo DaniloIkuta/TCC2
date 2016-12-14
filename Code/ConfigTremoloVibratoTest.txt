@@ -1,0 +1,53 @@
+# Created by Octave 4.2.0, Sat Dec 10 22:53:32 2016 BRST <DaniloIkuta@MacBook-Pro-4.local>
+# name: plotTV
+# type: scalar
+1
+
+
+# name: plotLH
+# type: scalar
+1
+
+
+# name: threshVibL
+# type: matrix
+# rows: 3
+# columns: 1
+ 0.06
+ 0.1125
+ 0.25
+
+
+# name: threshVibH
+# type: matrix
+# rows: 2
+# columns: 1
+ 0.3
+ 0.5
+
+
+# name: threshTremL
+# type: matrix
+# rows: 2
+# columns: 1
+ 1
+ 3
+
+
+# name: threshTremH
+# type: matrix
+# rows: 2
+# columns: 1
+ 5
+ 7.5
+
+
+# name: minPeak
+# type: matrix
+# rows: 3
+# columns: 1
+ 0.02
+ 0.056
+ 0.1
+
+

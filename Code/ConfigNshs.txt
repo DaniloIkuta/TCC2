@@ -1,0 +1,3 @@
+plotNshs = 0
+plotPartRem = 0
+weight = .99

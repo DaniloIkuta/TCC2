@@ -1,0 +1,42 @@
+# Created by Octave 4.2.0, Sat Dec 10 22:49:24 2016 BRST <DaniloIkuta@MacBook-Pro-4.local>
+# name: minSemi
+# type: matrix
+# rows: 3
+# columns: 1
+ 1
+ 10
+ 50
+
+
+# name: maxSemi
+# type: matrix
+# rows: 2
+# columns: 1
+ 100
+ 150
+
+
+# name: plotESI
+# type: scalar
+1
+
+
+# name: plotMel
+# type: scalar
+1
+
+
+# name: plotBg
+# type: scalar
+1
+
+
+# name: smoothness
+# type: matrix
+# rows: 3
+# columns: 1
+ 0.5
+ 1
+ 2
+
+

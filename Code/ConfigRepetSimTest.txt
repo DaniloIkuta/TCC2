@@ -1,0 +1,39 @@
+# Created by Octave 4.2.0, Sat Dec 10 22:43:01 2016 BRST <DaniloIkuta@MacBook-Pro-4.local>
+# name: minThresh
+# type: matrix
+# rows: 3
+# columns: 1
+ 0
+ 0.5
+ 1
+
+
+# name: minDist
+# type: matrix
+# rows: 3
+# columns: 1
+ 0.5
+ 1
+ 2
+
+
+# name: maxRep
+# type: scalar
+100
+
+
+# name: plotMat
+# type: scalar
+1
+
+
+# name: plotBg
+# type: scalar
+1
+
+
+# name: plotMel
+# type: scalar
+1
+
+

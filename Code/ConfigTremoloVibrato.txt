@@ -1,0 +1,11 @@
+plotTV = 0
+plotLH = 0
+threshVibL = 0.1125
+threshVibH = 0.3
+threshTremL = 3
+threshTremH = 5
+minPeak = 0.056
+
+#plotLH = plot low-high threshold spectrogram
+#plotTV = plot tremolo/vibrato
+#minPeak em segs.

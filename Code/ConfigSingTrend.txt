@@ -1,0 +1,12 @@
+trSize = 3000
+frSize = 13.5
+trHopSize = 1500
+frHopSize = 4
+smoothness = 1
+plotHR = 1
+plotTF = 1
+plotVoc = 1
+plotIns = 1
+
+#tr's em ms.
+#fr's em semitons

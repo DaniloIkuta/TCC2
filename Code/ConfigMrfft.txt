@@ -1,0 +1,15 @@
+winSize = 2048
+hopSize = 256
+bins = 2048
+winType = 2
+plot = 0
+minF = 20
+maxF = 5000
+
+#winSize e hopSize em samples.
+#wintype:
+#	1 = Hanning
+#	2 = Hamming
+#plot
+#	1 = True
+#	0 = False

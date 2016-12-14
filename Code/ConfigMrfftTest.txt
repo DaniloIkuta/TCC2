@@ -1,0 +1,46 @@
+# Created by Octave 4.2.0, Sat Dec 10 22:39:36 2016 BRST <DaniloIkuta@MacBook-Pro-4.local>
+# name: winSize
+# type: scalar
+2048
+
+
+# name: hopSize
+# type: scalar
+256
+
+
+# name: bins
+# type: scalar
+2048
+
+
+# name: winType
+# type: matrix
+# rows: 2
+# columns: 1
+ 1
+ 2
+
+
+# name: plot
+# type: scalar
+1
+
+
+# name: minF
+# type: matrix
+# rows: 3
+# columns: 1
+ 20
+ 100
+ 200
+
+
+# name: maxF
+# type: matrix
+# rows: 2
+# columns: 1
+ 5000
+ 22100
+
+

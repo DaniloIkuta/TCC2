@@ -1,0 +1,11 @@
+minThresh = 0.5
+minDist = 1
+maxRep = 50
+plotMat = 1
+plotBg = 1
+plotMel = 1
+
+#minThresh = Valor minimo para similaridade em um quadro = [0, 1]
+#minDist = Distancia minima entre os quadros repetidos (em segundos)
+#maxRep = Quantidade maxima de quadros repetidos
+#plot = plotar matriz de similaridade?
