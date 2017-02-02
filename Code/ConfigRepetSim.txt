@@ -1,4 +1,4 @@
-minThresh = 0.5
+minThresh = 0
 minDist = 1
 maxRep = 50
 plotMat = 1

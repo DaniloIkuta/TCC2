@@ -1,12 +1,9 @@
 samplesPath = ../Samples/Custom/
 outPath = ../Output/
-spectrogramMethod = MR-FFT
-voiceDetection = TV
-melodyExtraction = None
-saveBackground = 1
-saveVocal = 1
-saveMelody = 1
-audioList = 1
+spectrogramMethod = STFT
+voiceDetection = None
+melodyExtraction = ESI-DP
+audioList = 3
 
 #spectrogramMethod = 
 #	STFT

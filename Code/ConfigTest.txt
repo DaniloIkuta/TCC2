@@ -1,38 +1,35 @@
-# Created by Octave 4.2.0, Sat Dec 10 22:10:26 2016 BRST <DaniloIkuta@MacBook-Pro-4.local>
-# name: samplesPath
-# type: string
-# elements: 1
-# length: 17
-../Samples/Custom
+samplesPath = ../Samples/Custom/
+outPath = ../Output/
+STFTPresets = 1
+MRFFTPresets = 1
+TVPresets = 1
+NSHSPresets = 3
+SingTrendPresets = 1
+ESIPresets = 0
+REPETPresets = 0
+audioList = 1
 
+#spectrogramMethod = 
+#	STFT
+#	MR-FFT
+#
+#voiceDetection = 
+#	TV
+#	None
+#
+#melodyExtraction = 
+#	REPET-SIM
+#	ESI-DP
+#	None
+#
 
-# name: outPath
-# type: string
-# elements: 1
-# length: 10
-../Output/
-
-
-# name: audio
-# type: string
-# elements: 9
-# length: 12
-LTR-TS(I1)  
-# length: 12
-Dl-SotMM(S1)
-# length: 12
-HSMK-Bi(C1) 
-# length: 12
-HS-MiB(V1)  
-# length: 12
-Eg-TEGC(PC2)
-# length: 12
-Ka-TtB(C3)  
-# length: 12
-SSBB-TLoZ(9)
-# length: 12
-GC-H(I1)    
-# length: 12
-SA-B(C1)    
-
-
+#samplesPath = ../Samples/Custom/
+#outPath = ../Output/
+#STFTPresets = 12
+#MRFFTPresets = 6
+#TVPresets = 4
+#NSHSPresets = 3
+#SingTrendPresets = 6
+#ESIPresets = 6
+#REPETPresets = 5
+#audioList = 1

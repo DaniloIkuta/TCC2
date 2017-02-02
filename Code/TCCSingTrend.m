@@ -1,7 +1,13 @@
 %Estimativa de tendencia de vocal
-function [confSpec] = TCCSingTrend(spectrogram, nshsSpec, HTSpec, params, outPath, filename)
-	[trSize, frSize, trHopSize, frHopSize, smoothness, plotHR, plotTF, plotVoc, plotIns] = ... 
-		textread("ConfigSingTrend.txt", "trSize = %f\n frSize = %f\n trHopSize = %f\n frHopSize = %f\n smoothness = %f\n plotHR = %f\n plotTF = %f\n plotVoc = %f\n plotIns = %f", 9, "commentstyle", "shell");
+function [confSpec, outPath] = TCCSingTrend(spectrogram, nshsSpec, HTSpec, params, outPath, filename, preset)
+	%Config
+	if(preset == 0)
+		[trSize, frSize, trHopSize, frHopSize, smoothness, plotHR, plotTF, plotVoc, plotIns] = ... 
+			textread("ConfigSingTrend.txt", "trSize = %f\n frSize = %f\n trHopSize = %f\n frHopSize = %f\n smoothness = %f\n plotHR = %f\n plotTF = %f\n plotVoc = %f\n plotIns = %f", 9, "commentstyle", "shell");
+	else
+		[trSize, frSize, trHopSize, frHopSize, smoothness, plotHR, plotTF, plotVoc, plotIns] = ... 
+			textread(strcat("ConfigSingTrend", num2str(preset), ".txt"), "trSize = %f\n frSize = %f\n trHopSize = %f\n frHopSize = %f\n smoothness = %f\n plotHR = %f\n plotTF = %f\n plotVoc = %f\n plotIns = %f", 9, "commentstyle", "shell");
+	endif
 
 	wsm = params(1) * 1000 / params(9);
 	ts = floor(trSize / wsm);
@@ -24,20 +30,23 @@ function [confSpec] = TCCSingTrend(spectrogram, nshsSpec, HTSpec, params, outPat
 	%Remocao parcial de instrumental
 	binMax = floor(params(5) / params(9) * params(6));
 	binMin = floor(params(4) / params(9) * params(6)) + 1;
-	insRem(binMin:binMax, :) = spectrogram(binMin:binMax, :) .* (HTSpec(binMin:binMax, :) > 0);
-	hRem = sumHar = zeros(binMax, size(spectrogram, 2));
+	insRem(binMin:binMax, :) = spectrogram(binMin:binMax, :) .* HTSpec(binMin:binMax, :);
+	hRem = sumHar = zeros(size(spectrogram));
+	% hRem = spectrogram;
 
 	%Remover harmônicas (quantas?)
 	for f = binMin:binMax
 		Nf = floor(size(HTSpec, 1)*.5 / f);
-		sumHar(f, :) = sum(spectrogram((indF(1):Nf) * f, :) .* (insRem(f, :) > 0), 1);
-		% sumHar(f, :) = sum(HTSpec((indF(1):Nf) * f, :), 1);
+		% sumHar(f, :) = sum(spectrogram((indF(1):Nf) * f, :) .* insRem(f, :), 1);
+		sumHar(f, :) = sum(HTSpec((indF(1):Nf) * f, :), 1);
 	endfor
 
-	[maxf, maxi] = max(sumHar(:, (1:size(HTSpec, 2))));
-	for l = 1:(size(HTSpec, 2));
-		hRem(maxi(l), l) = maxf(l);
-	endfor
+	% [maxf, maxi] = max(sumHar(:, (1:size(HTSpec, 2))));
+	% for l = 1:(size(HTSpec, 2));
+	% 	hRem(maxi(l), l) = maxf(l);
+	% endfor
+
+	hRem = sumHar;
 
 	%Energia em cada regiao T-F
 	tfRegions = zeros(size(indF, 2), size(indT, 2));
@@ -63,7 +72,6 @@ function [confSpec] = TCCSingTrend(spectrogram, nshsSpec, HTSpec, params, outPat
 
 	k = 1:size(scores, 1);
 	for t = 2:size(scores, 2)
-		if(mod(t, 500) == 0) printf("%d/%d\n", t, size(spectrogram, 2)); endif
 		for f = 1:size(scores, 1)
 			[ks, ki] = max(scores(k, t-1) - smoothness .* abs(k - f)', [], 1);
 
@@ -80,43 +88,41 @@ function [confSpec] = TCCSingTrend(spectrogram, nshsSpec, HTSpec, params, outPat
 	for t = size(tfRegions, 2):-1:1
 		rf = [indF(optInd) : (indF(optInd) + fs(optInd))];
 		rt = [((t-1) * ths + 1) : ((t-1) * ths + ts + 1)];
-		confSpec(rf, rt) = spectrogram(rf, rt) .* (nshsSpec(rf, rt) > 0);
+		confSpec(rf, rt) = nshsSpec(rf, rt);
 		optInd = paths(optInd, t);
 	endfor
 
 	%plots
 	stOutPath = char(cstrcat("SingTrend(", num2str(trSize), " ", num2str(frSize), " ", num2str(trHopSize), " ", num2str(frHopSize), " ", num2str(smoothness), ")"));
-
-	if(exist(strcat(char(outPath, stOutPath)), "dir") != 7)
-		mkdir(outPath, stOutPath);
-	endif
+	mkdir(outPath, stOutPath);
 	outPath = char(strcat(outPath, stOutPath, "/"));
 
-	if(plotHR == true && nargin() == 6)
+	if(plotHR == true)
 		%Remocao de harmonicas
 		hrPlot = abs(hRem(binMin:binMax, :));
-		if(params(7) == 0)
-			hrPlot = hrPlot(1:round(size(hrPlot, 1)/2), :);
-		endif
+		% if(params(7) == 0)
+		% 	hrPlot = hrPlot(1:round(size(hrPlot, 1)/2), :);
+		% endif
 
 		saveName = char(strcat(outPath, filename, "-hRem.png"));
-		TCCPlotSpec(hrPlot, params, saveName, 1);
+		TCCPlotSpec(hrPlot, params, saveName, 2);
 
-		sig = TCCIstft(hRem, params, params(9));
+		sig = TCCIstft(hRem, params);
 		audiowrite(strcat(outPath, filename, "-hRem.wav"), sig, params(9));
 	endif
 
-	if(plotTF == true && nargin() == 6)
+	if(plotTF == true)
 		%Regioes T-F
 		%!!!!!!
 		figure(1);
 		set(1, "paperunits", "points");
-		set(1, "paperposition", [0, 0, round(params(8) / params(9) * 50), round((params(5) - params(4)) / 10)]);
+		set(1, "paperposition", [0, 0, round(params(8) / params(9) * 50), round((params(5) - params(4)) / 50)]);
 		colormap(flipud(gray()));
 
 		imagesc([1:columns(tfRegions)], [1:rows(tfRegions)], abs(tfRegions));
 
 		set(gca (), "ydir", "normal");
+		colorbar();
 		xlabel("Time Region");
 		ylabel("Frequency Region");
 
@@ -125,34 +131,35 @@ function [confSpec] = TCCSingTrend(spectrogram, nshsSpec, HTSpec, params, outPat
 		close(1);
 	endif
 
-	if(plotVoc == true && nargin() == 6)
+	if(plotVoc == true)
 		%confSpec
 		confSpecPlot = abs(confSpec(binMin:binMax, :));
-		if(params(7) == 0)
-			confSpecPlot = confSpecPlot(1:round(size(confSpecPlot, 1)/2), :);
-		endif
+		% if(params(7) == 0)
+		% 	confSpecPlot = confSpecPlot(1:round(size(confSpecPlot, 1)/2), :);
+		% endif
 
-		saveName = char(strcat(outPath, filename, "-ConfSpec.png"));
+		saveName = char(strcat(outPath, filename, "-Voc.png"));
 		TCCPlotSpec(confSpecPlot, params, saveName, 2);
 
-		sig = TCCIstft(confSpec, params, params(9));
-		audiowrite(strcat(outPath, filename, "-Voice.wav"), sig, params(9));
+		sig = TCCIstft(confSpec, params);
+		audiowrite(strcat(outPath, filename, "-Voc.wav"), sig, params(9));
 	endif
 
-	if(plotIns == true && nargin() == 6)
-		insSpecPlot = abs(spectrogram(binMin:binMax, :) - confSpec(binMin:binMax, :));
-		if(params(7) == 0)
-			confSpecPlot = confSpecPlot(1:round(size(confSpecPlot, 1)/2), :);
-		endif
+	if(plotIns == true)
+		insSpec = spectrogram - confSpec;
+		insSpecPlot = abs(insSpec(binMin:binMax, :));
+		% if(params(7) == 0)
+		% 	confSpecPlot = confSpecPlot(1:round(size(confSpecPlot, 1)/2), :);
+		% endif
 
 		saveName = char(strcat(outPath, filename, "-Ins.png"));
 		TCCPlotSpec(insSpecPlot, params, saveName, 2);
 
-		ins = TCCIstft(spectrogram - confSpec, params, params(9));
-		audiowrite(strcat(outPath, filename, "-Inst.wav"), ins, params(9));
+		ins = TCCIstft(insSpec, params);
+		audiowrite(strcat(outPath, filename, "-Ins.wav"), ins, params(9));
 	endif
 
-	clear -x confSpec
+	clear -x confSpec outPath
 endfunction
 
 % function [] = MaxScore(f, t, smoothness)

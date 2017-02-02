@@ -9,15 +9,11 @@ beep_on_error(true);
 ignore_function_time_stamp("all");
 
 %Carrega configs
-[samplesPath, outPath, spectrogramMethod, voiceDetection, melodyExtraction, saveBackground, saveVocal, saveMelody, audioList] = ...
-	textread("ConfigMain.txt", "samplesPath = %s\n outPath = %s\n spectrogramMethod = %s\n voiceDetection = %s\n melodyExtraction = %s\n saveBackground = %f\n saveVocal = %f\n saveMelody = %f\n audioList = %f", 9, "commentstyle", "shell");
+[samplesPath, outPath, spectrogramMethod, voiceDetection, melodyExtraction, audioList] = ...
+	textread("ConfigMain.txt", "samplesPath = %s\n outPath = %s\n spectrogramMethod = %s\n voiceDetection = %s\n melodyExtraction = %s\n audioList = %f", 6, "commentstyle", "shell");
 
 samplesPath = samplesPath{1};
-outPath = outPath{1};
-
-if(exist(strcat(char(outPath, "Final Results")), "dir") != 7 && (saveMelody == 1 || saveVocal == 1 || saveBackground == 1))
-	mkdir(outPath, "Final Results/");
-endif
+outPath(1) = outPath{1};
 
 %Obter nome do áudio
 if(audioList > 0)
@@ -29,6 +25,9 @@ endif
 for i = 1:size(filenames, 1)
 	disp(filenames{i});
 
+	mkdir(char(outPath(1)), filenames{i});
+	outPath(i+1) = strcat(char(outPath(1)), filenames{i}, "/");
+
 	try
 		%Abrir áudio
 		[origAudio, sampleRate] = audioread(strcat(samplesPath, filenames{i}, ".wav"));
@@ -37,11 +36,11 @@ for i = 1:size(filenames, 1)
 		%Espectrograma
 		if(strcmp(spectrogramMethod, "STFT") == 1)
 			disp("STFT")
-			[spectrogram, specParams] = TCCStft(origAudio, outPath, filenames{i}, sampleRate);
+			[spectrogram, specParams, specOutPath] = TCCStft(origAudio, char(outPath(i+1)), filenames{i}, sampleRate, 0);
 
 		elseif(strcmp(spectrogramMethod, "MR-FFT") == 1)
 			disp("MR-FFT");
-			[spectrogram, specParams] = TCCMrfft(origAudio, outPath, filenames{i}, sampleRate);
+			[spectrogram, specParams, specOutPath] = TCCMrfft(origAudio, char(outPath(i+1)), filenames{i}, sampleRate, 0);
 
 		else
 			display("Nenhuma opção de espectrograma selecionado, encerrando programa.");
@@ -49,38 +48,19 @@ for i = 1:size(filenames, 1)
 		endif
 
 		%zero-pad
-		zpFrames = ceil((specParams(1) - specParams(2) + size(origAudio, 1)) / specParams(2));
-		origAudio = [zeros(specParams(1) - specParams(2), 1); origAudio; zeros(zpFrames * specParams(2) - size(origAudio, 1), 1)];
+		% zpFrames = ceil((specParams(1) - specParams(2) + size(origAudio, 1)) / specParams(2));
+		% origAudio = [zeros(specParams(1) - specParams(2), 1); origAudio; zeros(zpFrames * specParams(2) - size(origAudio, 1), 1)];
 
 		%Detecção de voz
 		if(strcmp(voiceDetection, "TV") == 1)
 			disp("Identificacao de senoides");
 			[fpk, apk] = TCCSinId(spectrogram, specParams);
 			disp("Estimativa de Tremolo/Vibrato");
-			[LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, specParams, outPath, filenames{i});
+			[LTSpectrogram, HTSpectrogram, tvOutPath] = TCCTremVib(spectrogram, fpk, apk, specParams, char(specOutPath), filenames{i}, 0);
 			disp("NSHS");
-			nshsSpec = TCCNshs(spectrogram, LTSpectrogram, specParams, outPath, filenames{i});
+			[nshsSpec, nshsOutPath] = TCCNshs(spectrogram, LTSpectrogram, specParams, char(tvOutPath), filenames{i}, 0);
 			disp("Trend");
-			stSpectrogram = TCCSingTrend(spectrogram, nshsSpec, HTSpectrogram, specParams, outPath, filenames{i});
-
-			vocal = TCCIstft(stSpectrogram, specParams, sampleRate);
-			vocal = vocal(1:size(origAudio));
-
-			if(saveVocal == 1)
-				audiowrite(strcat(outPath, "/Final Results/", filenames{i}, "-Vocal.wav"), vocal, sampleRate);
-			endif
-
-			if(saveBackground == 1)
-				vocalMin = -min(vocal);
-				origAudioMin = -min(origAudio);
-
-				vocalNorm = (vocal + vocalMin) / (max(vocal) + vocalMin);
-				origAudioNorm = (origAudio + origAudioMin) / (max(origAudio) + origAudioMin);
-
-				inst = ((origAudioNorm - vocalNorm) * (max(origAudio)) + origAudioMin) - origAudioMin;
-
-				audiowrite(strcat(outPath, "/Final Results/", filenames{i}, "-Inst.wav"), inst, sampleRate);
-			endif
+			[stSpectrogram, stOutPath] = TCCSingTrend(spectrogram, nshsSpec, HTSpectrogram, specParams, char(nshsOutPath), filenames{i}, 0);
 		else
 			disp("Nenhum método de detecção de vocal selecionado.");
 		endif
@@ -89,63 +69,36 @@ for i = 1:size(filenames, 1)
 		if(strcmp(melodyExtraction, "REPET-SIM") == 1)
 			disp("Matrizes de Similaridade");
 			if(strcmp(voiceDetection, "TV") == 1)
-				bg = TCCRepetSim(spectrogram - stSpectrogram, size(origAudio), specParams, filenames{i}, outPath);
+				[bg, repetOutPath] = TCCRepetSim(spectrogram - stSpectrogram, size(origAudio), specParams, filenames{i}, char(stOutPath), 0);
 			else
-				bg = TCCRepetSim(spectrogram, size(origAudio), specParams, filenames{i}, outPath);
-			endif
-
-			if(saveBackground == 1)
-				audiowrite(strcat(outPath, "/Final Results/", filenames{i}, "-Background.wav"), bg, sampleRate);
-			endif
-
-			if(saveMelody == 1)
-				bgMin = -min(bg);
-				origAudioMin = -min(origAudio);
-
-				bgNorm = (bg + bgMin) / (max(bg) + bgMin);
-				origAudioNorm = (origAudio + origAudioMin) / (max(origAudio) + origAudioMin);
-
-				melody = ((origAudioNorm - bgNorm) * (max(origAudio)) + origAudioMin) - origAudioMin;
-
-				audiowrite(strcat(outPath, "/Final Results/", filenames{i}, "-Melody.wav"), melody, sampleRate);
+				[bg, repetOutPath] = TCCRepetSim(spectrogram, size(origAudio), specParams, filenames{i}, char(specOutPath), 0);
 			endif
 
 		%Verificar magnitude de melodia!
 		elseif(strcmp(melodyExtraction, "ESI-DP") == 1)
+			disp("ESI Extraction");
+
 			if(strcmp(voiceDetection, "TV") != 1)
 				disp("Identificacao de senoides");
 				[fpk, ~] = TCCSinId(spectrogram, specParams);
+				[melody, esiOutPath] = TCCEsiPE(spectrogram, fpk, specParams, char(specOutPath), filenames{i}, size(origAudio), 0);
+			else
 				spectrogram = stSpectrogram;
-			endif
-
-			disp("ESI Extraction");
-			melody = TCCEsiPE(spectrogram, fpk, specParams, outPath, filenames{i}, size(origAudio));
-
-			if(saveBackground == 1)
-				melMin = -min(melody);
-				origAudioMin = -min(origAudio);
-
-				melNorm = (melody + melMin) / (max(melody) + melMin);
-				origAudioNorm = (origAudio + origAudioMin) / (max(origAudio) + origAudioMin);
-
-				bg = ((origAudioNorm - melNorm) * (max(origAudio)) + origAudioMin) - origAudioMin;
-
-				audiowrite(strcat(outPath, "/Final Results/", filenames{i}, "-Background.wav"), bg, sampleRate);
-			endif
-
-			if(saveMelody == 1)
-				audiowrite(strcat(outPath, "/Final Results/", filenames{i}, "-Melody.wav"), melody, sampleRate);
+				[melody, esiOutPath] = TCCEsiPE(spectrogram, fpk, specParams, char(stOutPath), filenames{i}, size(origAudio), 0);
 			endif
 		else
 			display("Nenhuma opção de extração de melodia selecionado.");
 		endif
 
-		clear -x samplesPath outPath spectrogramMethod voiceDetection melodyExtraction saveBackground saveMelody saveVocal filenames
+		clear -x samplesPath outPath spectrogramMethod voiceDetection melodyExtraction filenames
 
 	catch erro
 		beep();
 		disp(erro.message);
-		% printf("ERRO: arquivo %s não encontrado!\n", filenames{i});
+		disp(erro.identifier);
+		for errInd = 1:size(erro.stack, 1)
+			disp(erro.stack(errInd));
+		endfor
 	end_try_catch
 
 	printf("\n");

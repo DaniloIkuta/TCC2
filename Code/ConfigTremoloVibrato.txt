@@ -1,5 +1,5 @@
-plotTV = 0
-plotLH = 0
+plotTV = 1
+plotLH = 1
 threshVibL = 0.1125
 threshVibH = 0.3
 threshTremL = 3

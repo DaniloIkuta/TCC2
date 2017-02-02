@@ -1,17 +1,21 @@
 %REPET-SIM (Matrizes de similaridade)
-function bg = TCCRepetSim(spectrogram, nSamples, params, filename, outPath)
+function [bg, outPath] = TCCRepetSim(spectrogram, nSamples, params, filename, outPath, preset)
 	global binMax = floor(params(5) / params(9) * params(6));
 	global binMin = floor(params(4) / params(9) * params(6)) + 1;
 
-	%Parâmetros de similaridade
-	[minThresh, minDist, maxRep, plotMat, plotBg, plotMel] = ... 
-		textread("ConfigRepetSim.txt", "minThresh = %f\n minDist = %f\n maxRep = %f\n plotMat = %f\n plotBg = %f\n plotMel = %f", 6, "commentstyle", "shell");
+	%Configs
+	if(preset == 0)
+		[minThresh, minDist, maxRep, plotMat, plotBg, plotMel] = ... 
+			textread("ConfigRepetSim.txt", "minThresh = %f\n minDist = %f\n maxRep = %f\n plotMat = %f\n plotBg = %f\n plotMel = %f", 6, "commentstyle", "shell");
+	else
+		[minThresh, minDist, maxRep, plotMat, plotBg, plotMel] = ... 
+			textread(strcat("ConfigRepetSim", num2str(preset), ".txt"), "minThresh = %f\n minDist = %f\n maxRep = %f\n plotMat = %f\n plotBg = %f\n plotMel = %f", 6, "commentstyle", "shell");
+	endif
 
-	% specSim = abs(spectrogram(1:size(spectrogram, 1)/2 + 1, :));
-	specSim = zeros(size(spectrogram, 1) / 2, size(spectrogram, 2));
-	specSim(binMin:binMax, :) = abs(spectrogram(binMin:binMax, :));
-
-	simMat = similarityMatrix(specSim, plot, filename, outPath);
+	% specSim = zeros(size(spectrogram, 1) / 2, size(spectrogram, 2));
+	% specSim(binMin:binMax, :) = abs(spectrogram(binMin:binMax, :));
+	specSim = abs(spectrogram);
+	simMat = similarityMatrix(specSim);
 	minDistInd = round(minDist*params(9)/params(2));
 
 	disp("Indices");
@@ -19,32 +23,28 @@ function bg = TCCRepetSim(spectrogram, nSamples, params, filename, outPath)
 
 	disp("Mask");
 	mask = repMask(specSim, simIndices);
-	mask(1 + (1:binMin), :) = 1;
-	mask = cat(1, mask, flipud(mask));
+	mask(1:(binMin - 1), :) = 1;
+	mask((binMax + 1):size(mask, 1), :) = 1;
 
 	bg = zeros(nSamples);
 	bg = TCCIstft(mask .* spectrogram, params);
-
 	bg = bg(1:nSamples);
 
 	repetOutPath = char(cstrcat("REPET-SIM(", num2str(minThresh), " ", num2str(minDist), " ", num2str(maxRep), ")"));
-
-	if(exist(strcat(char(outPath, repetOutPath)), "dir") != 7)
-		mkdir(outPath, repetOutPath);
-	endif
+	mkdir(outPath, repetOutPath);
 	outPath = char(strcat(outPath, repetOutPath, "/"));
 
 	%Plot
-	if(plotMat == true && nargin() == 5)
+	if(plotMat == true)
 		figure(1);
 		set(1, "paperunits", "points");
 		set(1, "paperposition", [0, 0, 1024, 1024]);
 
-		savefile = strcat(outPath, filename);
 		colormap(flipud(gray()));
 
 		imagesc([1:rows(simMat)], [1:columns(simMat)], simMat);
 		set(gca (), "ydir", "normal");
+		colorbar();
 		xlabel("Spectrogram");
 		ylabel("Spectrogram\'");
 
@@ -52,21 +52,21 @@ function bg = TCCRepetSim(spectrogram, nSamples, params, filename, outPath)
 		close(1);
 	endif
 
-	if(plotBg == true && nargin() == 5)
+	if(plotBg == true)
 		bgSpecPlot = abs(mask(binMin:binMax, :) .* spectrogram(binMin:binMax, :));
 
 		saveName = char(strcat(outPath, filename, "-bgSpec.png"));
 		TCCPlotSpec(bgSpecPlot, params, saveName, 1);
 
-		maskPlot = abs(mask(binMin:binMax, :));
-
-		saveName = char(strcat(outPath, filename, "-bgMask.png"));
-		TCCPlotSpec(maskPlot, params, saveName, 2);
-
 		audiowrite(strcat(outPath, filename, "-bg.wav"), bg, params(9));
+
+		% maskPlot = abs(mask(binMin:binMax, :));
+
+		% saveName = char(strcat(outPath, filename, "-bgMask.png"));
+		% TCCPlotSpec(maskPlot, params, saveName, 2);
 	endif
 
-	if(plotMel == true && nargin() == 5)
+	if(plotMel == true)
 		melSpecPlot = abs(spectrogram(binMin:binMax, :) - mask(binMin:binMax, :) .* spectrogram(binMin:binMax, :));
 
 		saveName = char(strcat(outPath, filename, "-melSpec.png"));
@@ -77,7 +77,7 @@ function bg = TCCRepetSim(spectrogram, nSamples, params, filename, outPath)
 	endif
 
 	clear global
-	clear -x bg
+	clear -x bg outPath
 endfunction
 
 function simMat = similarityMatrix(spectrogram)
@@ -107,7 +107,6 @@ function simIndices = similarityIndices(simMat, minThresh, minDist, maxRep)
 			si = sortrows(si, -1);
 
 			if(size(si) > maxRep)
-				printf("si size: %d\n", size(si, 2));
 				resize(si, [, maxRep]);
 			endif
 		endif
@@ -119,6 +118,7 @@ endfunction
 function mask = repMask(spectrogram, simIndices)
 	global binMin;
 	global binMax;
+
 	mask = zeros(size(spectrogram));
 
 	for j = 1:size(spectrogram, 2)

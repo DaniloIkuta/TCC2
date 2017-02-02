@@ -2,9 +2,9 @@ winSize = 2048
 hopSize = 256
 bins = 2048
 winType = 2
-plot = 0
+plot = 1
 minF = 20
-maxF = 5000
+maxF = 22050
 
 #winSize e hopSize em samples.
 #wintype:

@@ -1,5 +1,5 @@
 minSemi = 1
-maxSemi = 118
+maxSemi = 120
 plotESI = 1
 plotMel = 1
 plotBg = 1

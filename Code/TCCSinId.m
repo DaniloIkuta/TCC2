@@ -52,14 +52,10 @@ function [insF, aPeak] = TCCSinId(spectrogram, params)
 	kappa = [zeros(binMax, 1), kappa];
 
 	%Freq. instantanea
-	insF = zeros(binMax, size(spectrogram, 2));
-
-	k = binMin:binMax;
-	insF(k, :) = (kappa(k, :) + k') * (params(9) / N);
+	insF = aPeak = zeros(size(spectrogram));
 
 	%picos
 	wHann = zeros(1, size(spectrogram, 2));
-	aPeak = zeros(binMax, size(spectrogram, 2));
 
 	if(params(7) == 1) res = 2 .^ (0:3);
 	else res = 1;
@@ -82,12 +78,15 @@ function [insF, aPeak] = TCCSinId(spectrogram, params)
     	else
     		range = binMin:binMax;
 		endif
+
+		insF(range, :) = (kappa(range, :) + range') * (params(9) / N) .* (abs(kappa(range, :)) < (.7 * (r + 1)));
 		
     	for k = range
     		wHann(:) = sinc(M / N * pi * abs(kappa(k, :))) / (2 * (1 - (M / N * abs(kappa(k, :))) .^ 2));
 
 			l = 2:(size(spectrogram, 2) -1);
-			aPeak(k, l) = (abs(spectrogram(k, l)) ./ (2 * wHann(round(abs(N/M .* kappa(k, l))) + 1)) .* (abs(kappa(k, l)) < (.7 * (r + 1))));
+			% aPeak(k, l) = (abs(spectrogram(k, l)) ./ (2 * wHann(round(abs(N/M .* kappa(k, l))) + 1)) .* (abs(kappa(k, l)) < (.7 * (r + 1))));
+			aPeak(k, l) = (abs(spectrogram(k, l)) ./ (2 * wHann(round(abs(N/M .* kappa(k, l))) + 1)));
     	endfor
 
     	if(params(7) == 0) break; endif
@@ -105,6 +104,15 @@ function [insF, aPeak] = TCCSinId(spectrogram, params)
 	% aPeak(:, 1) = [];
 
 	%Plot?
+	% insFPlot = abs(insF(binMin:binMax, :));
+	% saveName = char(strcat("../Output/", "insF.png"));
+	% TCCPlotSpec(insFPlot, params, saveName, 2);
+	% aPeakPlot = abs(aPeak(binMin:binMax, :));
+	% saveName = char(strcat("../Output/", "aPeak.png"));
+	% TCCPlotSpec(aPeakPlot, params, saveName, 2);
+	% kappaPlot = abs(kappa(binMin:binMax, :));
+	% saveName = char(strcat("../Output/", "kappa.png"));
+	% TCCPlotSpec(kappaPlot, params, saveName, 2);
 
 	clear -x insF aPeak
 endfunction

@@ -1,26 +1,32 @@
 %Estimativa de tremolo e vibrato
-function [LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, params, outPath, filename)
-	[plotTV, plotLH, tVibL, tVibH, tTremL, tTremH, minPeak] = ...
-		textread("ConfigTremoloVibrato.txt", "plotTV = %f\n plotLH = %f\n threshVibL = %f\n threshVibH = %f\n threshTremL = %f\n threshTremH = %f\n minPeak = %f", 7, "commentstyle", "shell");
+function [LTSpectrogram, HTSpectrogram, outPath] = TCCTremVib(spectrogram, fpk, apk, params, outPath, filename, preset)
+	%Configs
+	if(preset == 0)
+		[plotTV, plotLH, tVibL, tVibH, tTremL, tTremH, minPeak] = ...
+			textread("ConfigTremoloVibrato.txt", "plotTV = %f\n plotLH = %f\n threshVibL = %f\n threshVibH = %f\n threshTremL = %f\n threshTremH = %f\n minPeak = %f", 7, "commentstyle", "shell");
+	else
+		[plotTV, plotLH, tVibL, tVibH, tTremL, tTremH, minPeak] = ...
+			textread(strcat("ConfigTremoloVibrato", num2str(preset), ".txt"), "plotTV = %f\n plotLH = %f\n threshVibL = %f\n threshVibH = %f\n threshTremL = %f\n threshTremH = %f\n minPeak = %f", 7, "commentstyle", "shell");
+	endif
 
 	% output_precision(20, "local");
-
 	binMax = floor(params(5) / params(9) * params(6));
 	binMin = floor(params(4) / params(9) * params(6)) + 1;
 
 	% fpk = abs(fpk);
 	% apk = abs(apk);
 
-	dF = zeros(binMax, size(spectrogram, 2));
-	dA = zeros(binMax, size(spectrogram, 2));
+	dF = dA = zeros(size(spectrogram));
 
 	%mf em hZ
 	mf = ((binMin - .5):(binMax + .5)) / size(spectrogram, 1) * params(9);
 
 	%Remoção de picos curtos
-	offset = floor(minPeak * params(9) / params(1)) - 1;
+	offset = floor(minPeak * params(9) / params(2));
 	k = binMin:binMax;
-	for l = 2:(size(spectrogram, 2) - offset)
+	
+	for l = 1:(size(spectrogram, 2) - offset)
+		fpk(k, l) = fpk(k, l) .* all(fpk(k, (l:l+offset)), 2);
 		apk(k, l) = apk(k, l) .* all(apk(k, (l:l+offset)), 2);
 	endfor
 
@@ -69,18 +75,16 @@ function [LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, para
 		if(params(7) == 0) break; endif
 	endfor
 
+	LTSpectrogram = HTSpectrogram = zeros(size(spectrogram));
 	LTSpectrogram(binMin:binMax, :) = spectrogram(binMin:binMax, :) .* (((dF(binMin:binMax, :) >= tVibL) + (dA(binMin:binMax, :) >= tTremL)) > 0);
 	HTSpectrogram(binMin:binMax, :) = spectrogram(binMin:binMax, :) .* (((dF(binMin:binMax, :) >= tVibH) + (dA(binMin:binMax, :) >= tTremH)) > 0);
 
 	tvOutPath = char(cstrcat("TV(", num2str(tVibL), " ", num2str(tVibH), " ", num2str(tTremL), " ", num2str(tTremH), " ", num2str(minPeak), ")"));
-
-	if(exist(strcat(char(outPath, tvOutPath)), "dir") != 7)
-		mkdir(outPath, tvOutPath);
-	endif
+	mkdir(outPath, tvOutPath);
 	outPath = char(strcat(outPath, tvOutPath, "/"));
 
 	%plots, .wavs
-	if(plotTV == true && nargin() == 6)
+	if(plotTV == true)
 		%dF(Vib)
 		dFPlot = abs(dF(binMin:binMax, :));
 		if(params(7) == 0)
@@ -90,7 +94,7 @@ function [LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, para
 		saveName = char(strcat(outPath, filename, "-Vib.png"));
 		TCCPlotSpec(dFPlot, params, saveName, 2);
 
-		sig = TCCIstft(dF, params, params(9));
+		sig = TCCIstft(dF, params);
 		audiowrite(strcat(outPath, filename, "-Vib.wav"), sig, params(9));
 
 		%dA(Trem)
@@ -102,11 +106,11 @@ function [LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, para
 		saveName = char(strcat(outPath, filename, "-Trem.png"));
 		TCCPlotSpec(dAPlot, params, saveName, 2);
 
-		sig = TCCIstft(dA, params, params(9));
+		sig = TCCIstft(dA, params);
 		audiowrite(strcat(outPath, filename, "-Trem.wav"), sig, params(9));
 	endif
 
-	if(plotLH == true && nargin == 6)
+	if(plotLH == true)
 		%LT
 		LTPlot = abs(LTSpectrogram(binMin:binMax, :));
 		if(params(7) == 0)
@@ -116,7 +120,7 @@ function [LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, para
 		saveName = char(strcat(outPath, filename, "-LTSpec.png"));
 		TCCPlotSpec(LTPlot, params, saveName, 2);
 
-		sig = TCCIstft(LTSpectrogram, params, params(9));
+		sig = TCCIstft(LTSpectrogram, params);
 		audiowrite(strcat(outPath, filename, "-LTSpec.wav"), sig, params(9));
 
 		%HT
@@ -128,9 +132,9 @@ function [LTSpectrogram, HTSpectrogram] = TCCTremVib(spectrogram, fpk, apk, para
 		saveName = char(strcat(outPath, filename, "-HTSpec.png"));
 		TCCPlotSpec(HTPlot, params, saveName, 2);
 
-		sig = TCCIstft(HTSpectrogram, params, params(9));
+		sig = TCCIstft(HTSpectrogram, params);
 		audiowrite(strcat(outPath, filename, "-HTSpec.wav"), sig, params(9));
 	endif
 
-	clear -x HTSpectrogram LTSpectrogram
+	clear -x HTSpectrogram LTSpectrogram outPath
 endfunction

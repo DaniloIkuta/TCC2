@@ -1,7 +1,13 @@
 %esi
-function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSamples)
-	[minSemi, maxSemi, plotESI, plotMel, plotBg, smoothness] = ...
-		textread("ConfigEsi.txt", "minSemi = %f\n maxSemi = %f\n plotESI = %d\n plotMel = %d\n plotBg = %d\n smoothness = %f", 6, "commentstyle", "shell");
+function [melSignal, outPath] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSamples, preset)
+	%Config
+	if(preset == 0)
+		[minSemi, maxSemi, plotESI, plotMel, plotBg, smoothness] = ...
+			textread("ConfigEsi.txt", "minSemi = %f\n maxSemi = %f\n plotESI = %d\n plotMel = %d\n plotBg = %d\n smoothness = %f", 6, "commentstyle", "shell");
+	else
+		[minSemi, maxSemi, plotESI, plotMel, plotBg, smoothness] = ...
+			textread(strcat("ConfigEsi", num2str(preset), ".txt"), "minSemi = %f\n maxSemi = %f\n plotESI = %d\n plotMel = %d\n plotBg = %d\n smoothness = %f", 6, "commentstyle", "shell");
+	endif
 
 	binMin = floor((params(4) / params(9) * params(6))) + 1;
 	binMax = floor((params(5) / params(9) * params(6)));
@@ -21,7 +27,6 @@ function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSa
 	f = f .* (f <= (binMax - binMin));
 
 	for t = 1:size(spectrogram, 2)
-		if(mod(t, 500) == 0) printf("%d/%d\n", t, size(spectrogram, 2)); endif
 		for in = 1:size(f, 2)
 			%abs?
 			x(:, in) = abs(spectrogram(f(:, in) + binMin, t));
@@ -31,7 +36,7 @@ function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSa
 		esi(n-1, t) = y;
 
 		for k = 1:(size(iy))
-			maxF(n, t) = floor(abs(fpk(f(:, iy(k)) + binMin, t)) * size(spectrogram, 1) / params(9) + 1) .* (y != 0);
+			maxF(n, t) = floor(abs(fpk(f(:, iy(k)) + binMin, t)) * params(6) / params(9) + 1) .* (y != 0);
 		endfor
 	endfor
 
@@ -44,7 +49,6 @@ function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSa
 
 	k = 1:size(scores, 1);
 	for t = 2:size(scores, 2)
-		if(mod(t, 500) == 0) printf("%d/%d\n", t, size(spectrogram, 2)); endif
 		for f = 1:size(scores, 1)
 			[ks, ki] = max(scores(k, t-1) - smoothness .* abs(k - f)', [], 1);
 			scores(f, t) = ks;
@@ -57,18 +61,21 @@ function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSa
 
 	melSpec = zeros(size(spectrogram));
 
-	%Check here
 	for t = size(esi, 2):-1:1
 		optSemi = esi(optInd, t);
 
 		if(maxF(optInd, t) != 0)
 			mf = maxF(optInd, t);
-			mf = floor(mf * size(spectrogram, 1) / params(9)) + 1;
-			melSpec(mf, t) = optSemi;
+			% mf = floor(mf * params(6) / params(9)) + 1;
+			% printf("optInd = %d\n mf = %d\n\n", optInd, mf);
+			% melSpec(mf, t) = optSemi;
+			melSpec(mf, t) = spectrogram(mf, t);
 		endif
 
 		optInd = paths(optInd, t);
 	endfor
+
+	melSpec = max(max(melSpec)) .* (melSpec > 0);
 
 	melSignal = TCCIstft(melSpec, params, params(9));
 	melSignal = melSignal(1:nSamples);
@@ -76,13 +83,10 @@ function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSa
 	%plots
 	fSemi = fSemi';
 	esiOutPath = char(cstrcat("EsiPE(", num2str(minSemi), " ", num2str(maxSemi), " ", num2str(smoothness), ")"));
-	
-	if(exist(strcat(char(outPath, esiOutPath)), "dir") != 7)
-		mkdir(outPath, esiOutPath);
-	endif
+	mkdir(outPath, esiOutPath);
 	outPath = char(strcat(outPath, esiOutPath, "/"));
 
-	if(plotESI == true && nargin() == 6)
+	if(plotESI == true)
 		%ESI
 		esiPlot = abs(esi(:, :));
 
@@ -99,26 +103,41 @@ function [melSignal] = TCCEsiPE(spectrogram, fpk, params, outPath, filename, nSa
 		imagesc([0:columns(esiPlot)] / params(9) * params(2), [0:rows(esiPlot)], log(esiPlot));
 
 		set(gca (), "ydir", "normal");
+		colorbar();
 		xlabel("Time");
 		ylabel("Semitone");
 
 		saveas(1, char(strcat(outPath, filename, "-ESI.png")));
+
 		close all force
 	endif
 
-	if(plotMel == true && nargin() == 6)
-		%Vocal/Melodia
+	if(plotMel == true)
 		melPlot = abs(melSpec(binMin:binMax, :));
-		if(params(7) == 0)
-			melPlot = melPlot(1:round(size(melPlot, 1)/2), :);
-		endif
+		% if(params(7) == 0)
+		% 	melPlot = melPlot(1:round(size(melPlot, 1)/2), :);
+		% endif
 
-		saveName = char(strcat(outPath, filename, "-PE.png"));
-		TCCPlotSpec(melPlot, params, saveName, 1);
+		saveName = char(strcat(outPath, filename, "-Mel.png"));
+		TCCPlotSpec(melPlot, params, saveName, 2);
 
-		bg = TCCIstft(spectrogram - confSpec, params, params(9));
-		audiowrite(strcat(outPath, filename, "-Inst.wav"), ins, params(9));
+		audiowrite(strcat(outPath, filename, "-Mel.wav"), melSignal, params(9));
 	endif
 
-	clear -x melSignal
+	if(plotBg == true)
+		%Vocal/Melodia
+		bgPlot = abs(spectrogram(binMin:binMax, :) .* (melSpec(binMin:binMax, :) == 0));
+
+		% if(params(7) == 0)
+		% 	melPlot = melPlot(1:round(size(melPlot, 1)/2), :);
+		% endif
+
+		saveName = char(strcat(outPath, filename, "-Bg.png"));
+		TCCPlotSpec(bgPlot, params, saveName, 1);
+
+		bg = TCCIstft(spectrogram - melSpec, params);
+		audiowrite(strcat(outPath, filename, "-Bg.wav"), bg, params(9));
+	endif
+
+	clear -x melSignal outPath
 endfunction
